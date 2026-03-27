@@ -1,0 +1,55 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Récupérer le code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Configurer Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # 3. Build et test des images (sans push)
+      - name: Build images
+        run: |
+          docker build -t app1:test ./app1
+          docker build -t app2:test ./app2
+          docker images
+
+      # 4. Tester avec docker-compose
+      - name: Start Docker Compose
+        run: |
+          docker compose up -d
+          sleep 15
+
+      - name: Test API endpoints
+        run: |
+          # Tester la page d'accueil
+          curl -f http://localhost/ || exit 1
+          
+          # Tester app1
+          curl -f http://localhost/app1/ || exit 1
+          curl -f http://localhost/app1/tasks || exit 1
+          curl -f http://localhost/app1/visits || exit 1
+          
+          # Tester app2
+          curl -f http://localhost/app2/ || exit 1
+          curl -f http://localhost/app2/visits || exit 1
+          curl -f http://localhost/app2/info || exit 1
+          
+          echo "✅ All tests passed!"
+
+      - name: Stop Docker Compose
+        run: docker compose down
